@@ -14,6 +14,8 @@ import argparse
 import sys
 sys.path.append("/instagram/igramscraper/")
 
+import json
+
 
 import twitterscraper
 import random
@@ -29,13 +31,16 @@ twitterscraper.query.HEADER = {'User-Agent': random.choice(HEADERS_LIST), 'X-Req
 
 
 
+database_username='root'
 
+database_password='root'
+database_ip='127.0.0.1'
+database_name= 'scraped_data'
+insta_username=''
+insta_pass=''
 
 def insertIntoDatabase(df,tableName):
-    database_username = 'root'
-    database_password = 'root'
-    database_ip       = '127.0.0.1'
-    database_name     = 'scraped_data'
+
     database_connection = sqlalchemy.create_engine('mysql+pymysql://{0}:{1}@{2}/{3}'.
                                                    format(database_username, database_password, 
                                                           database_ip, database_name), pool_recycle=1, pool_timeout=57600).connect()
@@ -152,21 +157,17 @@ def scrapeTwitter(hashtags,pageCount):
 
 
 def dowloadImagesTwitter():
-     
-    database_username = 'root'
-    database_password = 'root'
-    database_ip       = '127.0.0.1'
-    database_name     = 'scraped_data'
+   
     database_connection = sqlalchemy.create_engine('mysql+pymysql://{0}:{1}@{2}/{3}'.
                                                        format(database_username, database_password, 
                                                               database_ip, database_name), pool_recycle=1, pool_timeout=57600).connect()
-    a=database_connection.execute("Select photos,tweetId from twitter_clean where photos is not null and isImageDownloaded is null")
+    a=database_connection.execute("Select photos,id from twitter_clean where photos is not null and isImageDownloaded is null")
     print("Downloading images")
     for row in a:
         
         filename = row[0].split('/')[-1]
         urllib.request.urlretrieve(row[0], "./twitter_images/"+filename)
-        database_connection.execute("update twitter_clean set isImageDownloaded=1,imageName='"+filename+ "' where tweetId="+row[1])
+        database_connection.execute("update twitter_clean set isImageDownloaded=1,imageName='"+filename+ "' where id="+row[1])
         #database_connection.execute("Select photos,twee from twitter_clean where photos is not null limit 100")
 
 
@@ -175,20 +176,17 @@ def dowloadImagesTwitter():
 
 def dowloadImagesInsta():
      
-    database_username = 'root'
-    database_password = 'root'
-    database_ip       = '127.0.0.1'
-    database_name     = 'scraped_data'
+ 
     database_connection = sqlalchemy.create_engine('mysql+mysqlconnector://{0}:{1}@{2}/{3}'.
                                                        format(database_username, database_password, 
                                                               database_ip, database_name), pool_recycle=1, pool_timeout=57600).connect()
-    a=database_connection.execute("Select image_high_resolution_url,identifier from instagram_clean where image_high_resolution_url is not null and  isImageDownloaded is null")
+    a=database_connection.execute("Select image_high_resolution_url,id from instagram_clean where image_high_resolution_url is not null and  isImageDownloaded is null")
     print("Downloading images")
 
     for row in a:
         filename = row[0].split('/')[-1]
         urllib.request.urlretrieve(row[0], "./instagram_images/"+filename)
-        database_connection.execute("update instagram_clean set isImageDownloaded=1,imageName='"+filename+ "' where identifier="+row[1])
+        database_connection.execute("update instagram_clean set isImageDownloaded=1,imageName='"+filename+ "' where id="+row[1])
         #database_connection.execute("Select photos,twee from twitter_clean where photos is not null limit 100")
 
 
@@ -197,20 +195,17 @@ def dowloadImagesInsta():
 
 def dowloadImagesFb():
      
-    database_username = 'root'
-    database_password = 'root'
-    database_ip       = '127.0.0.1'
-    database_name     = 'scraped_data'
+
     database_connection = sqlalchemy.create_engine('mysql+mysqlconnector://{0}:{1}@{2}/{3}'.
                                                        format(database_username, database_password, 
                                                               database_ip, database_name), pool_recycle=1, pool_timeout=57600).connect()
-    a=database_connection.execute("Select image,post_id from fb_clean where image is not null and isImageDownloaded is null")
+    a=database_connection.execute("Select image,id from fb_clean where image is not null and isImageDownloaded is null")
     print("Downloading images")
     for row in a:
-        filename = row[0].split('/')[-1]
-        filename = row.split('=')[-1]+".jpg"
+        #filename = row[0].split('/')[-1]
+        filename = row[0].split('=')[-1]+".jpg"
         urllib.request.urlretrieve(row[0], "./fb_images/"+filename)
-        database_connection.execute("update fb_clean set isImageDownloaded=1,imageName='"+filename+ "' where post_id="+row[1])
+        database_connection.execute("update fb_clean set isImageDownloaded=1,imageName='"+filename+ "' where id="+row[1])
         #database_connection.execute("Select photos,twee from twitter_clean where photos is not null limit 100")
 
 
@@ -248,7 +243,9 @@ from instagram.igramscraper.instagram import Instagram
 def intagramScraper(tag,pageCount):
 
     instagram = Instagram()
-    instagram.with_credentials('nisha.pandey823@gmail.com', 'Nishi823@#$', './')
+    print(insta_username)
+    print(insta_pass)
+    instagram.with_credentials(insta_username, insta_pass, './')
     instagram.login()
     arr=[]
     medias = instagram.get_medias_by_tag(tag, count=pageCount)
@@ -305,6 +302,24 @@ def main():
     count=args.count
     download=args.download
     downloadOnly=args.downloadOnly
+
+    with open("config.json") as json_data_file:
+
+
+        data = json.load(json_data_file)
+        global database_username 
+        database_username=data['mysql']['user']
+        global database_password 
+        database_password = data['mysql']['password']
+        global database_ip 
+        database_ip = data['mysql']['host']
+        global database_name 
+        database_name = data['mysql']['db']
+        global insta_username
+        insta_username = data['instagram']['username']
+        global insta_pass 
+        insta_pass = data['instagram']['password']
+       
     if downloadOnly==None:
         downloadOnly='false'
     if downloadOnly=='false':

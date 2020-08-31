@@ -1,0 +1,13 @@
+{
+    "mysql":{
+        "host":"localhost",
+        "user":"root",
+        "password":"root",
+        "db":"scraped_data"
+    },
+    "instagram":{
+       
+        "username":"nisha.pandey823@gmail.com",
+        "password":"Nishi823@#$"
+    }
+}
